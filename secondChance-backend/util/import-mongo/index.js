@@ -1,50 +1,53 @@
+
 require('dotenv').config();
-const MongoClient = require('mongodb').MongoClient;
+
+const { MongoClient } = require('mongodb');
 const fs = require('fs');
+const path = require('path');
 
-// MongoDB connection URL with authentication options
-let url = `${process.env.MONGO_URL}`;
-let filename = `${__dirname}/secondChanceItems.json`;
-const dbName = 'secondChance';
-const collectionName = 'secondChanceItems';
+const url = process.env.MONGO_URL;
+const dbName = process.env.MONGO_DB || 'secondChance';
+const collectionName = process.env.MONGO_COLLECTION || 'secondChanceItems';
 
-// notice you have to load the array of items into the data object
-const data = JSON.parse(fs.readFileSync(filename, 'utf8')).docs;
+const filename = path.join(__dirname, 'secondChanceItems.json');
 
-// connect to database and insert data into the collection
+const data = JSON.parse(
+    fs.readFileSync(filename, 'utf8')
+).docs;
+
 async function loadData() {
     const client = new MongoClient(url);
 
     try {
-        // Connect to the MongoDB client
         await client.connect();
-        console.log("Connected successfully to server");
+        console.log('Connected successfully to server');
 
-        // database will be created if it does not exist
         const db = client.db(dbName);
-
-        // collection will be created if it does not exist
         const collection = db.collection(collectionName);
-        let cursor = await collection.find({});
-        let documents = await cursor.toArray();
 
-        if(documents.length == 0) {
-            // Insert data into the collection
-            const insertResult = await collection.insertMany(data);
-            console.log('Inserted documents:', insertResult.insertedCount);
+        const documentsCount = await collection.countDocuments();
+
+        if (documentsCount === 0) {
+            const result = await collection.insertMany(data);
+
+            console.log('Inserted documents:', result.insertedCount);
         } else {
-            console.log("Items already exists in DB")
+            console.log('Items already exist in DB:', documentsCount);
         }
+
     } catch (err) {
-        console.error(err);
+        console.error('Import error:', err);
+        throw err;
     } finally {
-        // Close the connection
         await client.close();
     }
 }
 
-loadData();
+if (require.main === module) {
+    loadData().catch(err => {
+        console.error(err);
+        process.exitCode = 1;
+    });
+}
 
-module.exports = {
-    loadData,
-  };
+module.exports = { loadData };
