@@ -1,0 +1,21 @@
+Terminal №1 — connect the MongoDB in Kubernetes
+kubectl port-forward svc/mongodb-service 27017:27017 -n default
+Remain running:
+Terminal №2 — run the Backend
+
+cd E:\JSProject\backend-nodejs-capstone\backend-nodejs-capstone\secondChance-backend
+npm install
+
+npm start
+Expected result:
+
+Connected to DB
+Server running on port 3061
+
+Terminal №3
+node index.js - For run the DataSet.
+
+POSTMAN:
+http://localhost:3061/api/secondchance/items
+http://localhost:3061/api/secondchance/items/875
+http://localhost:3061/api/secondchance/search?category=Office&name=Curtain
