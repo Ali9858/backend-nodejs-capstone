@@ -9,6 +9,17 @@ const logger = require('../logger');
 
 const JWT_SECRET = process.env.JWT_SECRET;
 
+function createToken(userId) {
+    const payload = {
+        user: {
+            id: userId.toString()
+        }
+    };
+
+    return jwt.sign(payload, JWT_SECRET, {
+        expiresIn: '24h'
+    });
+}
 if (!JWT_SECRET) {
     throw new Error('JWT_SECRET is not configured in .env');
 }
@@ -62,8 +73,11 @@ router.post('/register', async (req, res) => {
         logger.info('User registered successfully');
 
         return res.status(201).json({
+            authtoken,
             email,
-            authtoken
+            userName: firstName,
+            firstName,
+            lastName
         });
 
     } catch (e) {
@@ -89,14 +103,12 @@ router.post('/login', async (req, res) => {
             });
         }
 
-        // Task 1: Connect to MongoDB
         const db = await connectToDatabase();
+        const usersCollection = db.collection('users');
 
-        // Task 2: Access users collection
-        const collection = db.collection('users');
-
-        // Task 3: Find user
-        const theUser = await collection.findOne({ email });
+        const theUser = await usersCollection.findOne({
+            email: email.trim().toLowerCase()
+        });
 
         if (!theUser) {
             logger.error('User not found');
@@ -106,39 +118,27 @@ router.post('/login', async (req, res) => {
             });
         }
 
-        // Task 4: Compare passwords
-        const result = await bcryptjs.compare(
+        const passwordMatch = await bcryptjs.compare(
             password,
             theUser.password
         );
 
-        if (!result) {
-            logger.error('Passwords do not match');
-
+        if (!passwordMatch) {
             return res.status(401).json({
-                error: 'Wrong password'
+                error: 'Incorrect password'
             });
         }
 
-        // Task 5: Fetch user details
-        const userName = theUser.firstName;
-        const userEmail = theUser.email;
-
-        // Task 6: Generate JWT
-        const payload = {
-            user: {
-                id: theUser._id.toString()
-            }
-        };
-
-        const authtoken = jwt.sign(payload, JWT_SECRET);
+        const authtoken = createToken(theUser._id);
 
         logger.info('User logged in successfully');
 
         return res.status(200).json({
             authtoken,
-            userName: user.firstName,
-            userEmail: user.email
+            userName: theUser.firstName,
+            userEmail: theUser.email,
+            firstName: theUser.firstName,
+            lastName: theUser.lastName
         });
 
     } catch (e) {
@@ -149,6 +149,7 @@ router.post('/login', async (req, res) => {
         });
     }
 });
+
 
 // ========================================
 // UPDATE USER
@@ -225,7 +226,7 @@ router.put(
             }
 
             if (req.body.password) {
-                updateData.password = await bcrypt.hash(
+                updateData.password = await bcryptjs.hash(
                     req.body.password,
                     10
                 );
