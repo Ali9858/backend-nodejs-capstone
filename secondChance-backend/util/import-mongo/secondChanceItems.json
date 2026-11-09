@@ -16,17 +16,17 @@
             "author": "Olivia Parker",
             "comment": "Wow, this looks great! I'm interested."
             },
-            
+
             {
             "author": "David Thompson",
             "comment": "I'll take it if it's still up for grabs."
             },
-            
+
             {
             "author": "Emily Rodriguez",
             "comment": "This is exactly what I've been looking for. Count me in!"
             },
-            
+
             {
             "author": "Daniel Evans",
             "comment": "Seems like a good deal. Let's discuss further."
@@ -401,7 +401,7 @@
       "age_years": 3.29,
       "description": "This bed frame has been a reliable support for many restful nights...",
       "image": "/images/bed-frame.jpeg",
-      "comments": 
+      "comments":
           [
             {
               "author": "Liam Henderson",
@@ -441,6 +441,7 @@
           }
         ]
     },
+
     {
       "id": "430",
       "name": "Filing Cabinet",
@@ -453,50 +454,48 @@
       "age_years": 3.56,
       "description": "This filing cabinet has organized many documents over the years...",
       "image": "/images/filing-cabinet.jpeg",
-      "comments":
-      [
-          {
-            "author": "David Miller",
-            "comment": "This filing cabinet is a lifesaver! It helps me keep my home office organized and clutter-free. The spacious drawers can hold all my important documents, and the lockable feature gives me peace of mind. It's a perfect blend of functionality and style."
-          },
-          {
-            "author": "Maria Rodriguez",
-            "comment": "Finally found a filing cabinet that doesn't break the bank! The affordable price makes it a great option for anyone looking to organize their workspace. The sleek design and durable construction make it a valuable addition to any home office or study area."
-          },
-          {
-            "author": "William Jones",
-            "comment": "This vintage filing cabinet adds a touch of charm to my home office! It's sturdy and well-maintained, and the classic design complements my other furniture beautifully. It's a sustainable choice and a unique piece that reflects my personality."
-          }
-        ]
+      "comments": [
+        {
+          "author": "David Miller",
+          "comment": "This filing cabinet is a lifesaver! It helps me keep my home office organized and clutter-free."
+        },
+        {
+          "author": "Maria Rodriguez",
+          "comment": "Finally found a filing cabinet that doesn't break the bank!"
+        },
+        {
+          "author": "William Jones",
+          "comment": "This vintage filing cabinet adds a touch of charm to my home office!"
+        }
+      ]
+    },
+    {
+      "id": "500",
+      "name": "Gold King Bed",
+      "category": "Bedroom",
+      "condition": "New",
+      "posted_by": "17890",
+      "zipcode": "90001",
+      "date_added": 1794200714,
+      "age_days": 1,
+      "age_years": 0,
+      "description": "Very comfortable huge soft king bed in gold.",
+      "image": "/images/1794200714053-383789919.webp",
+      "comments": [
+        {
+          "author": "David Miller",
+          "comment": "This filing cabinet is a lifesaver! It helps me keep my home office organized and clutter-free."
+        },
+        {
+          "author": "Maria Rodriguez",
+          "comment": "Finally found a filing cabinet that doesn't break the bank!"
+        },
+        {
+          "author": "William Jones",
+          "comment": "This vintage filing cabinet adds a touch of charm to my home office!"
+        }
+      ]
     }
   ]
 }
-{
-  "id": "500",
-  "name": "Gold King Bed
-  "condition": "New",
-  "posted_by": "17890",
-  "zipcode": "90001",
-  "date_added": 1794200714,
-  "age_days": 1,
-  "age_years": 0,
-  "description": "Very comfortable huge soft king bed in gold.",
-  "image": "/images/Gold king bed.wepb",
-  "comments":
-  [
-    {
-      "author": "David Miller",
-      "comment": "This filing cabinet is a lifesaver! It helps me keep my home office organized and clutter-free. The spacious drawers can hold all my important documents, and the lockable feature gives me peace of mind. It's a perfect blend of functionality and style."
-    },
-    {
-      "author": "Maria Rodriguez",
-      "comment": "Finally found a filing cabinet that doesn't break the bank! The affordable price makes it a great option for anyone looking to organize their workspace. The sleek design and durable construction make it a valuable addition to any home office or study area."
-    },
-    {
-      "author": "William Jones",
-      "comment": "This vintage filing cabinet adds a touch of charm to my home office! It's sturdy and well-maintained, and the classic design complements my other furniture beautifully. It's a sustainable choice and a unique piece that reflects my personality."
-    }
-  ]
-}
-]
-}
+
