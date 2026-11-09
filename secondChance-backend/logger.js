@@ -11,8 +11,8 @@ if (process.env.NODE_ENV !== 'production') {
         },
     });
 } else {
-    // production
-    logger = pino();
+    logger = pino({
+        level: 'info'
+    });
 }
-
 module.exports = logger;

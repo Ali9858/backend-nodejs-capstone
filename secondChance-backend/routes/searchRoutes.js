@@ -2,46 +2,59 @@ const express = require('express');
 const router = express.Router();
 const connectToDatabase = require('../models/db');
 
-// Search for gifts
+// Search items
 router.get('/', async (req, res, next) => {
     try {
-        // Task 1: Connect to MongoDB
         const db = await connectToDatabase();
 
-        const collection = db.collection("secondChanceItems");
+        const collection = db.collection('secondChanceItems');
 
-        // Initialize the query object
-        let query = {};
+        const query = {};
 
-        // Task 2: Add the name filter
-        if (req.query.name && req.query.name.trim() !== '') {
+        // Search by name
+        if (req.query.name && req.query.name.trim()) {
+            const escapedName = req.query.name.trim().replace(
+                /[.*+?^${}()|[\]\\]/g,
+                '\\$&'
+            );
+
             query.name = {
-                $regex: req.query.name,
-                $options: "i"
+                $regex: escapedName,
+                $options: 'i'
             };
         }
 
-        // Task 3: Add other filters
+        // Filter by category
         if (req.query.category) {
             query.category = req.query.category;
         }
 
+        // Filter by condition
         if (req.query.condition) {
             query.condition = req.query.condition;
         }
 
+        // Filter by age
         if (req.query.age_years) {
+            const age = Number(req.query.age_years);
+
+            if (!Number.isFinite(age) || age < 0) {
+                return res.status(400).json({
+                    error: 'Invalid age_years'
+                });
+            }
+
             query.age_years = {
-                $lte: parseInt(req.query.age_years, 10)
+                $lte: age
             };
         }
 
-        // Task 4: Fetch filtered items
         const gifts = await collection.find(query).toArray();
 
-        res.json(gifts);
+        return res.json(gifts);
 
     } catch (e) {
+        console.error('Search error:', e);
         next(e);
     }
 });

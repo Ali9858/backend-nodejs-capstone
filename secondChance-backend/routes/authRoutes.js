@@ -2,17 +2,16 @@ const express = require('express');
 const router = express.Router();
 
 const connectToDatabase = require('../models/db');
-
-const bcrypt = require('bcrypt');
+const bcryptjs = require('bcryptjs');
 const jwt = require('jsonwebtoken');
-
-const {
-    body,
-    validationResult
-} = require('express-validator');
-
+const { body, validationResult } = require('express-validator');
 const logger = require('../logger');
 
+const JWT_SECRET = process.env.JWT_SECRET;
+
+if (!JWT_SECRET) {
+    throw new Error('JWT_SECRET is not configured in .env');
+}
 
 // ========================================
 // REGISTER USER
@@ -20,13 +19,68 @@ const logger = require('../logger');
 
 router.post('/register', async (req, res) => {
     try {
-        // Task 1: Connect to MongoDB
+        const { email, password, firstName, lastName } = req.body;
+
+        if (!email || !password || !firstName || !lastName) {
+            return res.status(400).json({
+                error: 'All fields are required'
+            });
+        }
+
         const db = await connectToDatabase();
+        const collection = db.collection('users');
 
-        // Task 2: Access users collection
-        const usersCollection = db.collection('users');
+        const existingUser = await collection.findOne({ email });
 
-        // Task 3: Get user credentials
+        if (existingUser) {
+            logger.error('Email already exists');
+
+            return res.status(400).json({
+                error: 'Email id already exists'
+            });
+        }
+
+        const salt = await bcryptjs.genSalt(10);
+        const hash = await bcryptjs.hash(password, salt);
+
+        const newUser = await collection.insertOne({
+            email,
+            firstName,
+            lastName,
+            password: hash,
+            createdAt: new Date()
+        });
+
+        const payload = {
+            user: {
+                id: newUser.insertedId.toString()
+            }
+        };
+
+        const authtoken = jwt.sign(payload, JWT_SECRET);
+
+        logger.info('User registered successfully');
+
+        return res.status(201).json({
+            email,
+            authtoken
+        });
+
+    } catch (e) {
+        logger.error(e);
+
+        return res.status(500).json({
+            error: 'Internal Server Error'
+        });
+    }
+});
+
+// ========================================
+// LOGIN USER
+// ========================================
+
+router.post('/login', async (req, res) => {
+    try {
         const { email, password } = req.body;
 
         if (!email || !password) {
@@ -35,196 +89,171 @@ router.post('/register', async (req, res) => {
             });
         }
 
-        // Check if user already exists
-        const existingUser = await usersCollection.findOne({ email });
-
-        if (existingUser) {
-            return res.status(400).json({
-                error: 'User already exists'
-            });
-        }
-
-        // Task 4: Hash password
-        const hashedPassword = await bcrypt.hash(password, 10);
-
-        // Task 5: Insert user into database
-        const newUser = {
-            email,
-            password: hashedPassword
-        };
-
-        const result = await usersCollection.insertOne(newUser);
-
-        // Task 6: Create JWT token
-        const token = jwt.sign(
-            { userId: result.insertedId },
-            process.env.JWT_SECRET
-        );
-
-        // Task 7: Log successful registration
-        logger.info(`User registered successfully: ${email}`);
-
-        // Task 8: Return email and token
-        res.status(201).json({
-            email,
-            token
-        });
-
-    } catch (e) {
-        logger.error('Registration error:', e);
-
-        return res.status(500).send('Internal server error');
-    }
-});
-
-
-// ========================================
-// LOGIN USER
-// ========================================
-
-router.post('/login', async (req, res) => {
-    try {
         // Task 1: Connect to MongoDB
         const db = await connectToDatabase();
 
         // Task 2: Access users collection
-        const usersCollection = db.collection('users');
+        const collection = db.collection('users');
 
         // Task 3: Find user
-        const { email, password } = req.body;
+        const theUser = await collection.findOne({ email });
 
-        const user = await usersCollection.findOne({ email });
+        if (!theUser) {
+            logger.error('User not found');
 
-        if (!user) {
             return res.status(404).json({
                 error: 'User not found'
             });
         }
 
         // Task 4: Compare passwords
-        const passwordMatch = await bcrypt.compare(
+        const result = await bcryptjs.compare(
             password,
-            user.password
+            theUser.password
         );
 
-        if (!passwordMatch) {
+        if (!result) {
+            logger.error('Passwords do not match');
+
             return res.status(401).json({
-                error: 'Incorrect password'
+                error: 'Wrong password'
             });
         }
 
         // Task 5: Fetch user details
-        const {
-            _id,
-            userName,
-            email: userEmail
-        } = user;
+        const userName = theUser.firstName;
+        const userEmail = theUser.email;
 
-        // Task 6: Create JWT token
-        const token = jwt.sign(
-            { userId: _id },
-            process.env.JWT_SECRET
-        );
+        // Task 6: Generate JWT
+        const payload = {
+            user: {
+                id: theUser._id.toString()
+            }
+        };
 
-        // Task 7: Return authentication token
-        res.json({
-            authtoken: token,
-            userName,
-            userEmail
+        const authtoken = jwt.sign(payload, JWT_SECRET);
+
+        logger.info('User logged in successfully');
+
+        return res.status(200).json({
+            authtoken,
+            userName: user.firstName,
+            userEmail: user.email
         });
 
     } catch (e) {
-        logger.error('Login error:', e);
+        logger.error(e);
 
-        return res.status(500).send('Internal server error');
+        return res.status(500).json({
+            error: 'Internal Server Error'
+        });
     }
 });
-
 
 // ========================================
 // UPDATE USER
 // ========================================
 
-router.put('/update', [
+router.put(
+    '/update',
+    [
+        body('firstName')
+            .optional()
+            .trim()
+            .notEmpty()
+            .withMessage('First name cannot be empty'),
 
-    // Task 1: Validate input
-    body('email').isEmail().normalizeEmail(),
-    body('userName').notEmpty(),
-    body('password').isLength({ min: 6 })
+        body('lastName')
+            .optional()
+            .trim()
+            .notEmpty()
+            .withMessage('Last name cannot be empty'),
 
-], async (req, res) => {
+        body('password')
+            .optional()
+            .isLength({ min: 6 })
+            .withMessage('Password must contain at least 6 characters')
+    ],
+    async (req, res) => {
 
-    // Task 2: Check validation errors
-    const errors = validationResult(req);
+        const errors = validationResult(req);
 
-    if (!errors.isEmpty()) {
-        return res.status(400).json({
-            errors: errors.array()
-        });
-    }
-
-    try {
-        // Task 3: Get email
-        const { email } = req.body;
-
-        if (!email) {
+        if (!errors.isEmpty()) {
             return res.status(400).json({
-                error: 'Email is required'
+                errors: errors.array()
             });
         }
 
-        // Task 4: Connect to MongoDB
-        const db = await connectToDatabase();
+        try {
+            // Get email from request header
+            const email = req.headers.email;
 
-        const usersCollection = db.collection('users');
-
-        // Task 5: Find existing user
-        const existingUser = await usersCollection.findOne({ email });
-
-        if (!existingUser) {
-            return res.status(404).json({
-                error: 'User not found'
-            });
-        }
-
-        // Hash updated password
-        const hashedPassword = await bcrypt.hash(
-            req.body.password,
-            10
-        );
-
-        // Task 6: Update user credentials
-        await usersCollection.updateOne(
-            { email },
-            {
-                $set: {
-                    userName: req.body.userName,
-                    password: hashedPassword,
-                    updatedAt: new Date()
-                }
+            if (!email) {
+                return res.status(400).json({
+                    error: 'Email not found in request headers'
+                });
             }
-        );
 
-        // Task 7: Create JWT token
-        const token = jwt.sign(
-            { userId: existingUser._id },
-            process.env.JWT_SECRET
-        );
+            // Connect to MongoDB
+            const db = await connectToDatabase();
 
-        res.json({
-            authtoken: token
-        });
+            // Access users collection
+            const usersCollection = db.collection('users');
 
-    } catch (e) {
-        logger.error('Update error:', e);
+            // Find existing user
+            const existingUser = await usersCollection.findOne({
+                email: email.trim().toLowerCase()
+            });
 
-        return res.status(500).send('Internal server error');
+            if (!existingUser) {
+                return res.status(404).json({
+                    error: 'User not found'
+                });
+            }
+
+            // Prepare update
+            const updateData = {
+                updatedAt: new Date()
+            };
+
+            if (req.body.firstName) {
+                updateData.firstName = req.body.firstName.trim();
+            }
+
+            if (req.body.lastName) {
+                updateData.lastName = req.body.lastName.trim();
+            }
+
+            if (req.body.password) {
+                updateData.password = await bcrypt.hash(
+                    req.body.password,
+                    10
+                );
+            }
+
+            // Update user in MongoDB
+            await usersCollection.updateOne(
+                { _id: existingUser._id },
+                { $set: updateData }
+            );
+
+            // Generate JWT
+            const authtoken = createToken(existingUser._id);
+
+            logger.info('User updated successfully');
+
+            return res.status(200).json({
+                message: 'User updated successfully',
+                authtoken
+            });
+
+        } catch (e) {
+            logger.error(e);
+
+            return res.status(500).json({
+                error: 'Internal server error'
+            });
+        }
     }
-});
-
-
-// ========================================
-// EXPORT ROUTER
-// ========================================
-
+);
 module.exports = router;

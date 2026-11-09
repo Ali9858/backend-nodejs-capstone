@@ -1,4 +1,3 @@
-
 require('dotenv').config();
 
 const { MongoClient } = require('mongodb');
@@ -6,23 +5,35 @@ const fs = require('fs');
 const path = require('path');
 
 const url = process.env.MONGO_URL;
+
 const dbName = process.env.MONGO_DB || 'secondChance';
-const collectionName = process.env.MONGO_COLLECTION || 'secondChanceItems';
 
-const filename = path.join(__dirname, 'secondChanceItems.json');
+const collectionName =
+    process.env.MONGO_COLLECTION || 'secondChanceItems';
 
-const data = JSON.parse(
-    fs.readFileSync(filename, 'utf8')
-).docs;
+const filename = path.join(
+    __dirname,
+    'secondChanceItems.json'
+);
 
 async function loadData() {
+    if (!url) {
+        throw new Error('MONGO_URL is not configured');
+    }
+
+    const data = JSON.parse(
+        fs.readFileSync(filename, 'utf8')
+    ).docs;
+
     const client = new MongoClient(url);
 
     try {
         await client.connect();
+
         console.log('Connected successfully to server');
 
         const db = client.db(dbName);
+
         const collection = db.collection(collectionName);
 
         const documentsCount = await collection.countDocuments();
@@ -30,14 +41,29 @@ async function loadData() {
         if (documentsCount === 0) {
             const result = await collection.insertMany(data);
 
-            console.log('Inserted documents:', result.insertedCount);
+            console.log(
+                'Inserted documents:',
+                result.insertedCount
+            );
+
+            console.log(
+                'inserted_items:',
+                result.insertedIds
+            );
+
+            return result;
+
         } else {
-            console.log('Items already exist in DB:', documentsCount);
+            console.log(
+                'Items already exist in DB:',
+                documentsCount
+            );
         }
 
     } catch (err) {
         console.error('Import error:', err);
         throw err;
+
     } finally {
         await client.close();
     }

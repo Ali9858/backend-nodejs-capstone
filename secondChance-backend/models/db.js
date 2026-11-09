@@ -3,27 +3,29 @@ require('dotenv').config();
 const { MongoClient } = require('mongodb');
 
 const url = process.env.MONGO_URL;
-const dbName = process.env.MONGO_DB;
+const dbName = process.env.MONGO_DB || 'secondChance';
 
-let dbInstance = null;
-let client = null;
+let client;
+let dbInstance;
 
 async function connectToDatabase() {
     if (dbInstance) {
         return dbInstance;
     }
 
-    if (!url || !dbName) {
-        throw new Error('MONGO_URL or MONGO_DB is not configured');
+    if (!url) {
+        throw new Error('MONGO_URL is not configured');
     }
 
-    client = new MongoClient(url);
+    if (!client) {
+        client = new MongoClient(url);
+    }
 
     await client.connect();
 
-    console.log(`Connected to MongoDB database: ${dbName}`);
-
     dbInstance = client.db(dbName);
+
+    console.log(`Connected to MongoDB database: ${dbName}`);
 
     return dbInstance;
 }
